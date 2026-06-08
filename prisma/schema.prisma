@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  RECEIVED
+  CONFIRMED
+  BEING_PREPARED
+  READY_FOR_PICKUP
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  REQUESTED
+  CONFIRMED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum CateringStatus {
+  QUOTE_REQUESTED
+  CONTACTED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  stripeSessionId String?     @unique
+  customerName    String?
+  customerEmail   String?
+  customerPhone   String?
+  pickupTime      String
+  status          OrderStatus @default(RECEIVED)
+  paymentStatus   PaymentStatus @default(PENDING)
+  paidAt          DateTime?
+  notes           String?
+  subtotalCents   Int
+  gstCents        Int
+  totalCents      Int
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([paymentStatus])
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String
+  name      String
+  priceCents Int
+  quantity  Int
+}
+
+model Booking {
+  id        String        @id @default(cuid())
+  date      DateTime
+  time      String
+  partySize Int
+  name      String
+  phone     String
+  email     String
+  occasion  String?
+  smsOptIn  Boolean       @default(false)
+  status    BookingStatus @default(REQUESTED)
+  guestNotes String?
+  internalNotes String?
+  tags      String[]       @default([])
+  tableId   String?
+  table     DiningTable?   @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([date, time])
+  @@index([tableId])
+  @@index([status])
+}
+
+model DiningTable {
+  id        String    @id @default(cuid())
+  name      String
+  capacity  Int
+  section   String?
+  x         Int       @default(0)
+  y         Int       @default(0)
+  active    Boolean   @default(true)
+  sortOrder Int?
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([active])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  kind      String   @default("info")
+  startsAt  DateTime?
+  endsAt    DateTime?
+  active    Boolean  @default(true)
+  showOnHome Boolean @default(true)
+  showOnMenu Boolean @default(true)
+  showOnOrder Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+  @@index([startsAt, endsAt])
+}
+
+model CateringEnquiry {
+  id        String         @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  eventDate DateTime?
+  guestCount Int?
+  status    CateringStatus @default(QUOTE_REQUESTED)
+  message   String
+  notes     String?
+  quotedAmountCents Int?
+  depositRequiredCents Int?
+  depositPaidAt DateTime?
+  reminderAt DateTime?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([status])
+  @@index([eventDate])
+  @@index([reminderAt])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model MenuItemOverride {
+  id          String   @id
+  name        String
+  priceCents  Int
+  imageUrl    String?
+  description String
+  tags        String[]
+  categorySlug String?
+  popular     Boolean  @default(false)
+  weekendOnly Boolean  @default(false)
+  sortOrder   Int?
+  visible     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CustomMenuItem {
+  id          String   @id
+  categorySlug String
+  name        String
+  priceCents  Int
+  imageUrl    String?
+  description String
+  tags        String[]
+  popular     Boolean  @default(false)
+  weekendOnly Boolean  @default(false)
+  sortOrder   Int?
+  visible     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([categorySlug])
+  @@index([visible])
+}
+
+model MenuCategoryOverride {
+  slug      String   @id
+  name      String
+  visible   Boolean  @default(true)
+  sortOrder Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ConfigOverride {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  adminEmail String
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([adminEmail])
+}

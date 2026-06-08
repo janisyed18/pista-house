@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 116" role="img" aria-labelledby="title desc">
+  <title id="title">Pista House</title>
+  <desc id="desc">Green script Pista House wordmark.</desc>
+  <defs>
+    <filter id="softLift" x="-4%" y="-10%" width="108%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="1.4" flood-color="#2c6b25" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="500" height="116" fill="none"/>
+  <text
+    x="8"
+    y="84"
+    filter="url(#softLift)"
+    fill="#67c850"
+    stroke="#f3d98f"
+    stroke-width="0.85"
+    paint-order="stroke fill"
+    font-family="'Brush Script MT', 'Segoe Script', 'Apple Chancery', cursive"
+    font-size="88"
+    font-style="italic"
+    font-weight="500"
+    letter-spacing="0"
+  >Pista House</text>
+</svg>

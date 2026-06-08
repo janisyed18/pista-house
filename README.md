@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pista House Wentworthville
 
-## Getting Started
+Production-ready Next.js restaurant website and admin operations dashboard for Pista House Wentworthville.
 
-First, run the development server:
+## Stack
+
+- Next.js 14 App Router, TypeScript, Tailwind CSS
+- NextAuth credentials admin login
+- Prisma ORM with PostgreSQL/Supabase-ready schema
+- Stripe Checkout routes for click-and-collect
+- Resend email helpers for orders, reservations, and guest messaging
+- Google reviews/map integration fallbacks
+- Vitest unit tests
+
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Admin defaults for local development:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```text
+Email: admin@pistahouse.com.au
+Password: pistahouse-admin
+```
 
-## Learn More
+Set `ADMIN_PASSWORD_HASH` in production instead of using the development password.
 
-To learn more about Next.js, take a look at the following resources:
+## Environment Variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Create `.env.local` for local secrets. Do not commit it.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```text
+DATABASE_URL=
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=
+ADMIN_EMAIL=admin@pistahouse.com.au
+ADMIN_PASSWORD=
+ADMIN_PASSWORD_HASH=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=
+GOOGLE_PLACES_API_KEY=
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
 
-## Deploy on Vercel
+## Validation
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm test
+npm run lint
+npm run build
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Database
+
+The Prisma schema lives in `prisma/schema.prisma`. Run migrations against your Supabase/PostgreSQL database before using persistent admin data.
+
+```bash
+npx prisma migrate dev
+npx prisma generate
+```
+
+Without `DATABASE_URL`, the app uses demo/fallback data for local UI development.
