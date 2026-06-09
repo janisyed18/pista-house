@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { sendOrderConfirmation } from "@/lib/email";
 import { flattenMenu, getMergedMenu } from "@/lib/menu";
-import { calculateOrderTotals, menuItemToCartLine } from "@/lib/order";
+import { calculateOrderTotals, formatCartLineCustomization, menuItemToCartLine, SPICE_LEVELS } from "@/lib/order";
 import { hasDatabase, prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -18,7 +18,10 @@ const schema = z.object({
   lines: z.array(
     z.object({
       id: z.string(),
+      menuItemId: z.string().optional(),
       quantity: z.number().int().positive(),
+      spiceLevel: z.enum(SPICE_LEVELS).optional(),
+      notes: z.string().max(160).optional(),
     }),
   ).min(1),
 });
@@ -28,11 +31,15 @@ export async function POST(request: Request) {
   const orderId = `PH-${Date.now()}`;
   const currentMenu = flattenMenu(await getMergedMenu());
   const serverLines = body.lines.map((line) => {
-    const item = currentMenu.find((menuItem) => menuItem.id === line.id);
+    const menuItemId = line.menuItemId ?? line.id;
+    const item = currentMenu.find((menuItem) => menuItem.id === menuItemId);
     if (!item) {
-      throw new Error(`Menu item not found: ${line.id}`);
+      throw new Error(`Menu item not found: ${menuItemId}`);
     }
-    return menuItemToCartLine(item, line.quantity);
+    return menuItemToCartLine(item, line.quantity, {
+      spiceLevel: line.spiceLevel,
+      notes: line.notes,
+    });
   });
   const totals = calculateOrderTotals(serverLines);
   const customerEmail = body.customerEmail || undefined;
@@ -58,6 +65,8 @@ export async function POST(request: Request) {
             name: line.name,
             quantity: line.quantity,
             priceCents: Math.round(line.price * 100),
+            spiceLevel: line.spiceLevel,
+            notes: line.notes,
           })),
         },
       },
@@ -84,7 +93,7 @@ export async function POST(request: Request) {
         currency: "aud",
         unit_amount: Math.round(line.price * 100),
         product_data: {
-          name: line.name,
+          name: [line.name, formatCartLineCustomization(line)].filter(Boolean).join(" - "),
         },
       },
     })),

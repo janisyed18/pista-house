@@ -68,6 +68,8 @@ model OrderItem {
   name      String
   priceCents Int
   quantity  Int
+  spiceLevel String?
+  notes      String?
 }
 
 model Booking {

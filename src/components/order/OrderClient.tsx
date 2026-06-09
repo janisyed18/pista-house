@@ -5,15 +5,28 @@ import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Clock, CreditCard, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { DietaryBadge } from "@/components/ui";
+import { DietaryBadge, FoodTypeIndicator } from "@/components/ui";
 import { RESTAURANT_CONFIG } from "@/config/restaurant";
 import { formatCurrency } from "@/lib/hours";
 import type { MergedMenuCategory, MergedMenuItem } from "@/lib/menu";
-import { calculateOrderTotals, menuItemToCartLine } from "@/lib/order";
+import { calculateOrderTotals, formatCartLineCustomization, menuItemToCartLine, SPICE_LEVELS, type SpiceLevel } from "@/lib/order";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 
 const slotOptions = ["ASAP", "12:30", "13:00", "13:30", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"];
+const maxDraftQuantity = 20;
+
+type ItemDraft = {
+  quantity: number;
+  spiceLevel: SpiceLevel;
+  notes: string;
+};
+
+const defaultDraft: ItemDraft = {
+  quantity: 1,
+  spiceLevel: "Medium",
+  notes: "",
+};
 
 export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCategory[] }) {
   const searchParams = useSearchParams();
@@ -24,7 +37,8 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const [addedFeedback, setAddedFeedback] = useState<{ id: string; name: string } | null>(null);
+  const [addedFeedback, setAddedFeedback] = useState<{ itemId: string; lineId: string; name: string; quantity: number } | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, ItemDraft>>({});
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lines = useCartStore((state) => state.lines);
   const addItem = useCartStore((state) => state.addItem);
@@ -52,9 +66,34 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
 
   const activeItems = useMemo(() => menuCategories.find((group) => group.slug === category)?.items ?? [], [category, menuCategories]);
 
+  function getDraft(itemId: string) {
+    return drafts[itemId] ?? defaultDraft;
+  }
+
+  function updateDraft(itemId: string, patch: Partial<ItemDraft>) {
+    setDrafts((current) => {
+      const nextDraft = { ...(current[itemId] ?? defaultDraft), ...patch };
+      return {
+        ...current,
+        [itemId]: {
+          ...nextDraft,
+          quantity: Math.min(maxDraftQuantity, Math.max(1, nextDraft.quantity)),
+          notes: nextDraft.notes.slice(0, 120),
+        },
+      };
+    });
+  }
+
   function addMenuItem(item: MergedMenuItem) {
-    addItem(menuItemToCartLine(item));
-    setAddedFeedback({ id: item.id, name: item.name });
+    const draft = getDraft(item.id);
+    const line = menuItemToCartLine(item, draft.quantity, {
+      spiceLevel: allowsSpiceSelection(item) ? draft.spiceLevel : undefined,
+      notes: draft.notes,
+    });
+
+    addItem(line);
+    setAddedFeedback({ itemId: item.id, lineId: line.id, name: item.name, quantity: draft.quantity });
+    updateDraft(item.id, { quantity: 1, notes: "" });
     if (feedbackTimerRef.current) {
       clearTimeout(feedbackTimerRef.current);
     }
@@ -103,52 +142,114 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
           ))}
         </div>
         <div className="grid min-w-0 gap-4 2xl:grid-cols-2">
-          {activeItems.map((item, index) => (
-            <article
-              key={item.id}
-              className={cn(
-                "grid min-w-0 gap-4 rounded border bg-white p-3 shadow-sm transition duration-200 sm:grid-cols-[128px_minmax(0,1fr)]",
-                addedFeedback?.id === item.id ? "border-leaf/55 ring-2 ring-leaf/20" : "border-black/8",
-              )}
-            >
-              <div className="relative aspect-square overflow-hidden rounded bg-smoke">
-                <Image
-                  src={item.imageUrl}
-                  alt={item.name}
-                  fill
-                  sizes="128px"
-                  priority={category === "plates" && index < 2}
-                  className="object-cover"
-                />
-              </div>
-              <div className="min-w-0">
-                <div className="flex min-w-0 items-start justify-between gap-3">
-                  <h2 className="min-w-0 break-words font-black leading-tight text-ink">{item.name}</h2>
-                  <p className="shrink-0 whitespace-nowrap font-black text-burgundy-700">{formatCurrency(item.price)}</p>
+          {activeItems.map((item, index) => {
+            const draft = getDraft(item.id);
+            const itemAllowsSpice = allowsSpiceSelection(item);
+            const isAdded = addedFeedback?.itemId === item.id;
+
+            return (
+              <article
+                key={item.id}
+                className={cn(
+                  "grid min-w-0 gap-4 rounded border bg-white p-3 shadow-sm transition duration-200 sm:grid-cols-[128px_minmax(0,1fr)]",
+                  isAdded ? "border-leaf/55 ring-2 ring-leaf/20" : "border-black/8",
+                )}
+              >
+                <div className="relative aspect-square overflow-hidden rounded bg-smoke">
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.name}
+                    fill
+                    sizes="128px"
+                    priority={category === "plates" && index < 2}
+                    className="object-cover"
+                  />
                 </div>
-                <p className="mt-2 text-sm leading-5 text-charcoal/65">{item.description}</p>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex gap-1">
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <h2 className="min-w-0 break-words font-black leading-tight text-ink">{item.name}</h2>
+                    <p className="shrink-0 whitespace-nowrap font-black text-burgundy-700">{formatCurrency(item.price)}</p>
+                  </div>
+                  <p className="mt-2 text-sm leading-5 text-charcoal/65">{item.description}</p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <FoodTypeIndicator tags={item.dietaryTags} />
                     {item.dietaryTags.map((tag) => (
-                      <DietaryBadge key={tag} tag={tag} />
+                      <DietaryBadge key={tag} tag={tag} label="full" />
                     ))}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => addMenuItem(item)}
-                    disabled={addedFeedback?.id === item.id}
-                    className={cn(
-                      "inline-flex min-w-[88px] items-center justify-center gap-2 rounded px-3 py-2 text-xs font-black text-white transition disabled:cursor-default",
-                      addedFeedback?.id === item.id ? "bg-leaf shadow-[0_0_0_4px_rgba(38,118,90,0.14)]" : "bg-burgundy-900 hover:bg-burgundy-700",
-                    )}
-                  >
-                    {addedFeedback?.id === item.id ? <CheckCircle2 aria-hidden className="h-3.5 w-3.5" /> : <Plus aria-hidden className="h-3.5 w-3.5" />}
-                    {addedFeedback?.id === item.id ? "Added" : "Add"}
-                  </button>
+                  <div className="mt-4 grid gap-3 border-t border-black/8 pt-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-charcoal/48">Quantity</p>
+                        <div className="mt-1 inline-flex items-center rounded border border-black/10 bg-white">
+                          <button
+                            type="button"
+                            onClick={() => updateDraft(item.id, { quantity: draft.quantity - 1 })}
+                            className="grid h-9 w-9 place-items-center text-charcoal transition hover:bg-smoke"
+                            aria-label={`Decrease ${item.name} quantity`}
+                          >
+                            <Minus aria-hidden className="h-3.5 w-3.5" />
+                          </button>
+                          <span className="w-8 text-center text-sm font-black">{draft.quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => updateDraft(item.id, { quantity: draft.quantity + 1 })}
+                            className="grid h-9 w-9 place-items-center text-charcoal transition hover:bg-smoke"
+                            aria-label={`Increase ${item.name} quantity`}
+                          >
+                            <Plus aria-hidden className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => addMenuItem(item)}
+                        disabled={isAdded}
+                        className={cn(
+                          "inline-flex min-h-10 min-w-[112px] items-center justify-center gap-2 rounded px-3 py-2 text-xs font-black text-white transition disabled:cursor-default",
+                          isAdded ? "bg-leaf shadow-[0_0_0_4px_rgba(38,118,90,0.14)]" : "bg-burgundy-900 hover:bg-burgundy-700",
+                        )}
+                      >
+                        {isAdded ? <CheckCircle2 aria-hidden className="h-3.5 w-3.5" /> : <Plus aria-hidden className="h-3.5 w-3.5" />}
+                        {isAdded ? "Added" : `Add ${draft.quantity}`}
+                      </button>
+                    </div>
+                    {itemAllowsSpice ? (
+                      <fieldset>
+                        <legend className="mb-1 text-[11px] font-black uppercase tracking-[0.14em] text-charcoal/48">Spice level</legend>
+                        <div className="grid grid-cols-2 gap-1 sm:grid-cols-4 2xl:grid-cols-2">
+                          {SPICE_LEVELS.map((level) => (
+                            <button
+                              key={level}
+                              type="button"
+                              aria-pressed={draft.spiceLevel === level}
+                              onClick={() => updateDraft(item.id, { spiceLevel: level })}
+                              className={cn(
+                                "min-h-9 rounded border px-2 text-xs font-black transition",
+                                draft.spiceLevel === level ? "border-burgundy-900 bg-burgundy-900 text-white" : "border-black/10 bg-white text-charcoal hover:border-burgundy-700/40",
+                              )}
+                            >
+                              {level}
+                            </button>
+                          ))}
+                        </div>
+                      </fieldset>
+                    ) : null}
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.14em] text-charcoal/48">Chef notes</span>
+                      <input
+                        value={draft.notes}
+                        onChange={(event) => updateDraft(item.id, { notes: event.target.value })}
+                        placeholder="No onion, extra raita, allergy note"
+                        maxLength={120}
+                        className="h-10 w-full rounded border border-black/10 px-3 text-sm font-bold outline-none transition placeholder:text-charcoal/35 focus:border-burgundy-700 focus:ring-2 focus:ring-burgundy-700/15"
+                      />
+                    </label>
+                  </div>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       </section>
 
@@ -162,7 +263,7 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
             {addedFeedback ? (
               <div className="flex min-h-11 items-center gap-2 rounded border border-leaf/20 bg-leaf/10 px-3 py-2 text-sm font-black text-leaf">
                 <CheckCircle2 aria-hidden className="h-4 w-4" />
-                Added {addedFeedback.name} to your order
+                Added {addedFeedback.quantity} x {addedFeedback.name} to your order
               </div>
             ) : null}
           </div>
@@ -223,7 +324,7 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
                   key={line.id}
                   className={cn(
                     "rounded border p-3 transition duration-200",
-                    addedFeedback?.id === line.id ? "border-leaf/35 bg-leaf/5" : "border-black/8 bg-white",
+                    addedFeedback?.lineId === line.id ? "border-leaf/35 bg-leaf/5" : "border-black/8 bg-white",
                   )}
                 >
                   <div className="flex justify-between gap-3">
@@ -232,6 +333,9 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
                       <Trash2 aria-hidden className="h-4 w-4 text-charcoal/45" />
                     </button>
                   </div>
+                  {formatCartLineCustomization(line) ? (
+                    <p className="mt-2 text-xs font-bold leading-5 text-burgundy-700">{formatCartLineCustomization(line)}</p>
+                  ) : null}
                   <div className="mt-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <button type="button" onClick={() => setQuantity(line.id, line.quantity - 1)} className="grid h-8 w-8 place-items-center rounded bg-smoke" aria-label="Decrease quantity">
@@ -281,4 +385,8 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
       </aside>
     </div>
   );
+}
+
+function allowsSpiceSelection(item: MergedMenuItem) {
+  return item.dietaryTags.includes("S");
 }

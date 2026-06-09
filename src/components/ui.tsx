@@ -7,7 +7,7 @@ import type { DietaryTag, MenuItem } from "@/data/menu";
 import { formatCurrency } from "@/lib/hours";
 import { cn } from "@/lib/utils";
 
-const tagLabels: Record<DietaryTag, string> = {
+export const DIETARY_TAG_LABELS: Record<DietaryTag, string> = {
   V: "Vegetarian",
   VG: "Vegan",
   H: "Halal",
@@ -76,10 +76,10 @@ export function ButtonLink({
   );
 }
 
-export function DietaryBadge({ tag }: { tag: DietaryTag }) {
+export function DietaryBadge({ tag, label = "short" }: { tag: DietaryTag; label?: "short" | "full" }) {
   return (
     <span
-      title={tagLabels[tag]}
+      title={DIETARY_TAG_LABELS[tag]}
       className={cn(
         "inline-flex h-6 min-w-6 items-center justify-center rounded border px-2 text-[11px] font-black",
         tag === "H" && "border-leaf/25 bg-leaf/10 text-leaf",
@@ -89,7 +89,18 @@ export function DietaryBadge({ tag }: { tag: DietaryTag }) {
         tag === "GF" && "border-saffron-700/25 bg-saffron-100 text-saffron-700",
       )}
     >
-      {tag}
+      {label === "full" ? DIETARY_TAG_LABELS[tag] : tag}
+    </span>
+  );
+}
+
+export function FoodTypeIndicator({ tags }: { tags: DietaryTag[] }) {
+  const isVeg = tags.includes("V") || tags.includes("VG") || !tags.includes("H");
+
+  return (
+    <span className={cn("inline-flex h-6 items-center gap-1.5 rounded border px-2 text-[11px] font-black", isVeg ? "border-emerald-700/25 bg-emerald-50 text-emerald-700" : "border-red-700/25 bg-red-50 text-red-700")}>
+      <span className={cn("h-2.5 w-2.5 rounded-full", isVeg ? "bg-emerald-600" : "bg-red-600")} aria-hidden />
+      {isVeg ? "Veg" : "Non-veg"}
     </span>
   );
 }

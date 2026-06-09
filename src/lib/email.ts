@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
 import { RESTAURANT_CONFIG } from "@/config/restaurant";
-import type { CartLine } from "@/lib/order";
+import { formatCartLineCustomization, type CartLine } from "@/lib/order";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const from = process.env.RESEND_FROM_EMAIL ?? "Pista House <orders@pistahouse.com.au>";
@@ -114,7 +114,10 @@ export async function sendGuestMessage(payload: {
 }
 
 function renderLines(lines: CartLine[]) {
-  return `<ul>${lines.map((line) => `<li>${line.quantity} x ${line.name}</li>`).join("")}</ul>`;
+  return `<ul>${lines.map((line) => {
+    const customization = formatCartLineCustomization(line);
+    return `<li>${line.quantity} x ${line.name}${customization ? `<br><small>${escapeHtml(customization)}</small>` : ""}</li>`;
+  }).join("")}</ul>`;
 }
 
 function escapeHtml(value: string) {

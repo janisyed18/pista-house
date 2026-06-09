@@ -1,6 +1,6 @@
 import type { Order, OrderItem } from "@prisma/client";
 
-import { formatCents } from "@/lib/order";
+import { formatCartLineCustomization, formatCents, type CartLine } from "@/lib/order";
 
 export type AdminOrderWithItems = Order & {
   items: OrderItem[];
@@ -33,6 +33,12 @@ export function serializeAdminOrder(order: AdminOrderWithItems) {
       priceCents: item.priceCents,
       displayPrice: formatCents(item.priceCents),
       quantity: item.quantity,
+      spiceLevel: item.spiceLevel,
+      notes: item.notes,
+      customization: formatCartLineCustomization({
+        spiceLevel: item.spiceLevel as CartLine["spiceLevel"],
+        notes: item.notes ?? undefined,
+      }),
       lineTotalCents: item.priceCents * item.quantity,
       displayLineTotal: formatCents(item.priceCents * item.quantity),
     })),
@@ -69,6 +75,9 @@ export function demoAdminOrders() {
           priceCents: 2500,
           displayPrice: "$25.00",
           quantity: 1,
+          spiceLevel: "Medium",
+          notes: "Extra raita",
+          customization: "Spice: Medium · Note: Extra raita",
           lineTotalCents: 2500,
           displayLineTotal: "$25.00",
         },
@@ -79,6 +88,9 @@ export function demoAdminOrders() {
           priceCents: 2200,
           displayPrice: "$22.00",
           quantity: 1,
+          spiceLevel: "Spicy",
+          notes: null,
+          customization: "Spice: Spicy",
           lineTotalCents: 2200,
           displayLineTotal: "$22.00",
         },

@@ -53,6 +53,9 @@ type AdminOrder = {
     name: string;
     quantity: number;
     displayLineTotal: string;
+    spiceLevel: string | null;
+    notes: string | null;
+    customization: string;
   }>;
 };
 
@@ -1241,6 +1244,7 @@ function OrderDetail({
             <div>
               <p className="font-black text-ink">{item.quantity} x {item.name}</p>
               <p className="text-charcoal/55">{item.menuItemId}</p>
+              {item.customization ? <p className="mt-1 text-xs font-bold text-burgundy-700">{item.customization}</p> : null}
             </div>
             <p className="font-black text-burgundy-700">{item.displayLineTotal}</p>
           </div>

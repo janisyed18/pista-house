@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 import { sendOrderConfirmation } from "@/lib/email";
+import type { CartLine } from "@/lib/order";
 import { hasDatabase, prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -50,9 +51,12 @@ export async function POST(request: Request) {
         orderId: order.id,
         lines: order.items.map((item) => ({
           id: item.menuItemId,
+          menuItemId: item.menuItemId,
           name: item.name,
           price: item.priceCents / 100,
           quantity: item.quantity,
+          spiceLevel: item.spiceLevel as CartLine["spiceLevel"],
+          notes: item.notes ?? undefined,
         })),
       });
     }
