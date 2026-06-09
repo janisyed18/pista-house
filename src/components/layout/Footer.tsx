@@ -9,6 +9,7 @@ const footerLinks = [
   ["Menu", "/menu"],
   ["Order Online", "/order"],
   ["Reserve", "/reserve"],
+  ["Catering", "/catering"],
   ["About", "/about"],
   ["Contact", "/contact"],
   ["Privacy Policy", "/privacy"],

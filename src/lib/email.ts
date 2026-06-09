@@ -96,6 +96,29 @@ export async function sendContactAlert(payload: {
   });
 }
 
+export async function sendCateringAlert(payload: {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  eventDate?: Date | null;
+  guestCount?: number | null;
+  message: string;
+  notes?: string | null;
+}) {
+  if (!resend) {
+    return { skipped: true };
+  }
+
+  return resend.emails.send({
+    from,
+    to: RESTAURANT_CONFIG.email,
+    replyTo: payload.email,
+    subject: `Catering request: ${payload.name}`,
+    html: `<h1>New catering request</h1><p><strong>Reference:</strong> ${escapeHtml(payload.id)}</p><p><strong>${escapeHtml(payload.name)}</strong> (${escapeHtml(payload.email)})</p><p><strong>Phone:</strong> ${escapeHtml(payload.phone ?? "Not provided")}</p><p><strong>Date:</strong> ${escapeHtml(payload.eventDate?.toISOString().slice(0, 10) ?? "Not provided")}</p><p><strong>Guests:</strong> ${escapeHtml(payload.guestCount?.toString() ?? "Not provided")}</p><pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(payload.message)}</pre>${payload.notes ? `<p><strong>Admin notes:</strong> ${escapeHtml(payload.notes)}</p>` : ""}`,
+  });
+}
+
 export async function sendGuestMessage(payload: {
   to?: string | null;
   subject: string;

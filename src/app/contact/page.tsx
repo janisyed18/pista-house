@@ -39,7 +39,7 @@ export default function ContactPage() {
               <Train aria-hidden className="mb-3 h-5 w-5 text-burgundy-700" />
               Parking nearby. 2 min walk from Wentworthville Station.
             </div>
-            <a href="/contact?subject=Catering" className="rounded bg-saffron-300 p-5 text-center text-sm font-black text-burgundy-900">
+            <a href="/catering" className="rounded bg-saffron-300 p-5 text-center text-sm font-black text-burgundy-900">
               Catering enquiry
             </a>
           </div>
