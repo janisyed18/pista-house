@@ -2,14 +2,15 @@
 
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { Clock, CreditCard, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Clock, CreditCard, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { DietaryBadge } from "@/components/ui";
 import { RESTAURANT_CONFIG } from "@/config/restaurant";
 import { formatCurrency } from "@/lib/hours";
 import type { MergedMenuCategory, MergedMenuItem } from "@/lib/menu";
 import { calculateOrderTotals, menuItemToCartLine } from "@/lib/order";
+import { cn } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 
 const slotOptions = ["ASAP", "12:30", "13:00", "13:30", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"];
@@ -23,6 +24,8 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [addedFeedback, setAddedFeedback] = useState<{ id: string; name: string } | null>(null);
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lines = useCartStore((state) => state.lines);
   const addItem = useCartStore((state) => state.addItem);
   const removeItem = useCartStore((state) => state.removeItem);
@@ -39,10 +42,23 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
     }
   }, [addItem, menuCategories, searchParams]);
 
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) {
+        clearTimeout(feedbackTimerRef.current);
+      }
+    };
+  }, []);
+
   const activeItems = useMemo(() => menuCategories.find((group) => group.slug === category)?.items ?? [], [category, menuCategories]);
 
   function addMenuItem(item: MergedMenuItem) {
     addItem(menuItemToCartLine(item));
+    setAddedFeedback({ id: item.id, name: item.name });
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current);
+    }
+    feedbackTimerRef.current = setTimeout(() => setAddedFeedback(null), 1400);
   }
 
   async function checkout() {
@@ -88,7 +104,13 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
         </div>
         <div className="grid min-w-0 gap-4 2xl:grid-cols-2">
           {activeItems.map((item, index) => (
-            <article key={item.id} className="grid min-w-0 gap-4 rounded border border-black/8 bg-white p-3 shadow-sm sm:grid-cols-[128px_minmax(0,1fr)]">
+            <article
+              key={item.id}
+              className={cn(
+                "grid min-w-0 gap-4 rounded border bg-white p-3 shadow-sm transition duration-200 sm:grid-cols-[128px_minmax(0,1fr)]",
+                addedFeedback?.id === item.id ? "border-leaf/55 ring-2 ring-leaf/20" : "border-black/8",
+              )}
+            >
               <div className="relative aspect-square overflow-hidden rounded bg-smoke">
                 <Image
                   src={item.imageUrl}
@@ -114,10 +136,14 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
                   <button
                     type="button"
                     onClick={() => addMenuItem(item)}
-                    className="inline-flex items-center gap-2 rounded bg-burgundy-900 px-3 py-2 text-xs font-black text-white"
+                    disabled={addedFeedback?.id === item.id}
+                    className={cn(
+                      "inline-flex min-w-[88px] items-center justify-center gap-2 rounded px-3 py-2 text-xs font-black text-white transition disabled:cursor-default",
+                      addedFeedback?.id === item.id ? "bg-leaf shadow-[0_0_0_4px_rgba(38,118,90,0.14)]" : "bg-burgundy-900 hover:bg-burgundy-700",
+                    )}
                   >
-                    <Plus aria-hidden className="h-3.5 w-3.5" />
-                    Add
+                    {addedFeedback?.id === item.id ? <CheckCircle2 aria-hidden className="h-3.5 w-3.5" /> : <Plus aria-hidden className="h-3.5 w-3.5" />}
+                    {addedFeedback?.id === item.id ? "Added" : "Add"}
                   </button>
                 </div>
               </div>
@@ -131,6 +157,14 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
           <div className="mb-5 flex items-center gap-2">
             <ShoppingBag aria-hidden className="h-5 w-5 text-burgundy-700" />
             <h2 className="text-xl font-black">Your Pickup Order</h2>
+          </div>
+          <div aria-live="polite" aria-atomic="true" className="mb-4 min-h-11">
+            {addedFeedback ? (
+              <div className="flex min-h-11 items-center gap-2 rounded border border-leaf/20 bg-leaf/10 px-3 py-2 text-sm font-black text-leaf">
+                <CheckCircle2 aria-hidden className="h-4 w-4" />
+                Added {addedFeedback.name} to your order
+              </div>
+            ) : null}
           </div>
           <label className="mb-5 block">
             <span className="mb-2 flex items-center gap-2 text-sm font-black text-charcoal">
@@ -185,7 +219,13 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
               <p className="rounded bg-smoke p-4 text-sm font-semibold text-charcoal/65">Choose dishes to start your order.</p>
             ) : (
               lines.map((line) => (
-                <div key={line.id} className="rounded border border-black/8 p-3">
+                <div
+                  key={line.id}
+                  className={cn(
+                    "rounded border p-3 transition duration-200",
+                    addedFeedback?.id === line.id ? "border-leaf/35 bg-leaf/5" : "border-black/8 bg-white",
+                  )}
+                >
                   <div className="flex justify-between gap-3">
                     <h3 className="text-sm font-black text-ink">{line.name}</h3>
                     <button type="button" onClick={() => removeItem(line.id)} aria-label={`Remove ${line.name}`}>
