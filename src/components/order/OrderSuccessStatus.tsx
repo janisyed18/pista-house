@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { StatusTracker } from "@/components/ui";
+import { requestOrderStatus } from "@/lib/order-status-client";
 
 const statusIndex: Record<string, number> = {
   RECEIVED: 0,
@@ -14,15 +15,22 @@ const statusIndex: Record<string, number> = {
 
 export function OrderSuccessStatus({ orderId }: { orderId: string }) {
   const [status, setStatus] = useState("RECEIVED");
+  const [statusError, setStatusError] = useState("");
 
   useEffect(() => {
     let active = true;
 
     async function loadStatus() {
-      const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}/status`);
-      const data = (await response.json()) as { status?: string };
-      if (active && data.status) {
-        setStatus(data.status);
+      try {
+        const nextStatus = await requestOrderStatus(orderId);
+        if (active) {
+          setStatus(nextStatus);
+          setStatusError("");
+        }
+      } catch (error) {
+        if (active) {
+          setStatusError(error instanceof Error ? error.message : "Order status is temporarily unavailable.");
+        }
       }
     }
 
@@ -41,6 +49,7 @@ export function OrderSuccessStatus({ orderId }: { orderId: string }) {
     <div className="mt-8 rounded bg-ink p-4">
       <StatusTracker activeIndex={activeIndex} />
       <p className="mt-3 text-sm font-black text-saffron-100">Current status: {status.replaceAll("_", " ")}</p>
+      {statusError ? <p className="mt-2 text-xs font-bold text-white/60">{statusError} We will keep checking automatically.</p> : null}
     </div>
   );
 }
