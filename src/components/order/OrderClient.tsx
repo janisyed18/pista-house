@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { DietaryBadge, FoodTypeIndicator } from "@/components/ui";
 import { RESTAURANT_CONFIG } from "@/config/restaurant";
+import { requestCheckoutUrl } from "@/lib/checkout-client";
 import { formatCurrency } from "@/lib/hours";
 import type { MergedMenuCategory, MergedMenuItem } from "@/lib/menu";
 import { calculateOrderTotals, formatCartLineCustomization, menuItemToCartLine, SPICE_LEVELS, type SpiceLevel } from "@/lib/order";
@@ -37,6 +38,7 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
   const [addedFeedback, setAddedFeedback] = useState<{ itemId: string; lineId: string; name: string; quantity: number } | null>(null);
   const [drafts, setDrafts] = useState<Record<string, ItemDraft>>({});
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,13 +104,15 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
 
   async function checkout() {
     setLoading(true);
-    const response = await fetch("/api/stripe/create-checkout-session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lines, pickupTime, customerName, customerEmail, customerPhone }),
-    });
-    const data = await response.json();
-    window.location.href = data.url;
+    setCheckoutError("");
+
+    try {
+      const url = await requestCheckoutUrl({ lines, pickupTime, customerName, customerEmail, customerPhone });
+      window.location.href = url;
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : "Checkout is temporarily unavailable. Please try again or call the restaurant.");
+      setLoading(false);
+    }
   }
 
   return (
@@ -378,6 +382,7 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
           <p className="mt-3 text-xs leading-5 text-charcoal/55">
             Promo codes can be entered securely in Stripe Checkout. Local development returns a demo success link when Stripe is not configured.
           </p>
+          {checkoutError ? <p className="mt-3 rounded border border-burgundy-700/20 bg-burgundy-50 p-3 text-sm font-bold text-burgundy-700">{checkoutError}</p> : null}
           <a href={RESTAURANT_CONFIG.orderingLink} target="_blank" rel="noreferrer" className="mt-4 block text-center text-sm font-black text-burgundy-700">
             Prefer delivery? Order via DoorDash
           </a>
