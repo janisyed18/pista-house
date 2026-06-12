@@ -11,6 +11,7 @@ import { requestCheckoutUrl } from "@/lib/checkout-client";
 import { formatCurrency } from "@/lib/hours";
 import type { MergedMenuCategory, MergedMenuItem } from "@/lib/menu";
 import { calculateOrderTotals, formatCartLineCustomization, menuItemToCartLine, SPICE_LEVELS, type SpiceLevel } from "@/lib/order";
+import { getCartUpsellSuggestions } from "@/lib/order-upsells";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 
@@ -47,6 +48,8 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
   const removeItem = useCartStore((state) => state.removeItem);
   const setQuantity = useCartStore((state) => state.setQuantity);
   const totals = useMemo(() => calculateOrderTotals(lines), [lines]);
+  const allMenuItems = useMemo(() => menuCategories.flatMap((group) => group.items), [menuCategories]);
+  const upsellSuggestions = useMemo(() => getCartUpsellSuggestions(lines, allMenuItems), [allMenuItems, lines]);
 
   useEffect(() => {
     const item = searchParams.get("item");
@@ -96,6 +99,16 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
     addItem(line);
     setAddedFeedback({ itemId: item.id, lineId: line.id, name: item.name, quantity: draft.quantity });
     updateDraft(item.id, { quantity: 1, notes: "" });
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current);
+    }
+    feedbackTimerRef.current = setTimeout(() => setAddedFeedback(null), 1400);
+  }
+
+  function addUpsellSuggestion(item: MergedMenuItem) {
+    const line = menuItemToCartLine(item);
+    addItem(line);
+    setAddedFeedback({ itemId: item.id, lineId: line.id, name: item.name, quantity: 1 });
     if (feedbackTimerRef.current) {
       clearTimeout(feedbackTimerRef.current);
     }
@@ -356,6 +369,35 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
               ))
             )}
           </div>
+          {upsellSuggestions.length ? (
+            <div className="mt-5 rounded border border-saffron-700/15 bg-saffron-50/70 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-black text-ink">Complete your meal</h3>
+                  <p className="mt-1 text-xs font-semibold leading-5 text-charcoal/58">Add a drink, dessert or biryani side.</p>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2">
+                {upsellSuggestions.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between gap-3 rounded bg-white p-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-black text-ink">{item.name}</p>
+                      <p className="text-xs font-bold text-burgundy-700">{formatCurrency(item.price)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label={`Add ${item.name} to order`}
+                      onClick={() => addUpsellSuggestion(item)}
+                      className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded bg-burgundy-900 px-3 text-xs font-black text-white transition hover:bg-burgundy-700"
+                    >
+                      <Plus aria-hidden className="h-3.5 w-3.5" />
+                      Add
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <dl className="mt-5 grid gap-2 border-t border-black/8 pt-5 text-sm">
             <div className="flex justify-between">
               <dt>Subtotal</dt>
