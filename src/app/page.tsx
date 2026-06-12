@@ -8,6 +8,7 @@ import { LiveStatusBar } from "@/components/home/LiveStatusBar";
 import { MapSection } from "@/components/home/MapSection";
 import { MenuPreview } from "@/components/home/MenuPreview";
 import { QuickInfoStrip } from "@/components/home/QuickInfoStrip";
+import { RecognitionStrip } from "@/components/home/RecognitionStrip";
 import { ReviewsSection } from "@/components/home/ReviewsSection";
 import { SocialProofBanner } from "@/components/home/SocialProofBanner";
 import { WhyChooseUs } from "@/components/home/WhyChooseUs";
@@ -28,6 +29,7 @@ export default async function Home() {
       <HeroSection hasHeroVideo={hasHeroVideo} reviews={reviews} />
       <LiveStatusBar />
       <QuickInfoStrip />
+      <RecognitionStrip />
       <FeaturedSection menuItems={menuItems} />
       <WhyChooseUs />
       <MenuPreview menuCategories={menuCategories} />
