@@ -2,17 +2,21 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { CalendarDays, ClipboardList, MapPin, Phone, ShoppingBag, Utensils } from "lucide-react";
+import { CalendarDays, ClipboardList, MapPin, Phone, ShoppingBag, Star, Utensils } from "lucide-react";
 
 import { ButtonLink } from "@/components/ui";
 import { RESTAURANT_CONFIG } from "@/config/restaurant";
+import { formatHeroReviewSummary } from "@/lib/review-summary";
+import type { ReviewsResult } from "@/lib/reviews";
 
 const fadeUp = {
   initial: { opacity: 0, y: 22 },
   animate: { opacity: 1, y: 0 },
 };
 
-export function HeroSection({ hasHeroVideo }: { hasHeroVideo: boolean }) {
+export function HeroSection({ hasHeroVideo, reviews }: { hasHeroVideo: boolean; reviews: ReviewsResult }) {
+  const reviewSummary = formatHeroReviewSummary(reviews);
+
   return (
     <section className="relative min-h-[calc(100svh-5rem)] overflow-hidden bg-ink text-white">
       <div className="absolute inset-0">
@@ -62,6 +66,21 @@ export function HeroSection({ hasHeroVideo }: { hasHeroVideo: boolean }) {
           <motion.p variants={fadeUp} className="mt-5 max-w-2xl text-lg leading-8 text-white/78">
             Authentic Hyderabadi dum biryani, family curries, halal favourites and click-and-collect dining in the heart of Wentworthville.
           </motion.p>
+          <motion.div
+            variants={fadeUp}
+            className="mt-6 inline-flex flex-wrap items-center gap-3 rounded border border-white/16 bg-black/32 px-4 py-3 text-sm font-black text-white shadow-2xl shadow-black/20 backdrop-blur"
+            aria-label={reviewSummary.ariaLabel}
+          >
+            <span className="inline-flex items-center gap-1 text-saffron-200">
+              <Star aria-hidden className="h-4 w-4 fill-current" />
+              {reviewSummary.ratingLabel}
+            </span>
+            <span className="h-5 w-px bg-white/22" aria-hidden />
+            <span>{reviewSummary.countLabel} {reviewSummary.sourceLabel}</span>
+            <span className="rounded-full bg-leaf/90 px-2.5 py-1 text-[11px] uppercase tracking-[0.14em] text-white">
+              Local favourite
+            </span>
+          </motion.div>
           <motion.div variants={fadeUp} className="mt-8 grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <ButtonLink href={RESTAURANT_CONFIG.orderingLink} icon={ShoppingBag} external>
               Order Online

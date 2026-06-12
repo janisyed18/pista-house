@@ -3,9 +3,10 @@ import { Star } from "lucide-react";
 
 import { SectionHeading } from "@/components/ui";
 import { getReviews } from "@/lib/reviews";
+import type { ReviewsResult } from "@/lib/reviews";
 
-export async function ReviewsSection() {
-  const reviews = await getReviews();
+export async function ReviewsSection({ reviews: initialReviews }: { reviews?: ReviewsResult }) {
+  const reviews = initialReviews ?? (await getReviews());
 
   return (
     <section className="bg-background py-16 md:py-24">
