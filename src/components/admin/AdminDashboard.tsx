@@ -156,6 +156,7 @@ type MenuFormState = {
   imageUrl: string;
   tags: string;
   visible: boolean;
+  available: boolean;
   popular: boolean;
   weekendOnly: boolean;
 };
@@ -190,6 +191,7 @@ const emptyMenuForm: MenuFormState = {
   imageUrl: "",
   tags: "H",
   visible: true,
+  available: true,
   popular: false,
   weekendOnly: false,
 };
@@ -588,6 +590,7 @@ export function AdminDashboard() {
       imageUrl: item.imageUrl,
       tags: item.dietaryTags.join(", "),
       visible: item.visible,
+      available: item.available,
       popular: item.popular,
       weekendOnly: item.weekendOnly ?? false,
     });
@@ -609,6 +612,7 @@ export function AdminDashboard() {
         imageUrl: menuForm.imageUrl,
         tags: parseTags(menuForm.tags),
         visible: menuForm.visible,
+        available: menuForm.available,
         popular: menuForm.popular,
         weekendOnly: menuForm.weekendOnly,
       };
@@ -622,6 +626,36 @@ export function AdminDashboard() {
       setMessage(isNew ? "Menu item added" : "Menu item saved");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Menu save failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function updateMenuAvailability(item: MergedMenuItem, available: boolean) {
+    setBusy(`availability-${item.id}`);
+    try {
+      await fetchJson(`/api/admin/menu/items/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          categorySlug: item.category,
+          name: item.name,
+          description: item.description,
+          price: item.price,
+          imageUrl: item.imageUrl,
+          tags: item.dietaryTags,
+          visible: item.visible,
+          available,
+          popular: item.popular,
+          weekendOnly: item.weekendOnly ?? false,
+          sortOrder: item.sortOrder ?? null,
+        }),
+      });
+      await loadMenu();
+      setMenuForm((current) => (current.id === item.id ? { ...current, available } : current));
+      setMessage(available ? `${item.name} restored to ordering` : `${item.name} marked sold out`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Availability update failed");
     } finally {
       setBusy(null);
     }
@@ -868,29 +902,43 @@ export function AdminDashboard() {
                   New item
                 </button>
                 {activeMenuItems.map((item) => (
-                  <button
+                  <div
                     key={item.id}
-                    type="button"
-                    onClick={() => selectMenuItem(item)}
                     className={cn(
-                      "grid gap-3 rounded border p-3 text-left sm:grid-cols-[88px_minmax(0,1fr)_auto]",
+                      "grid gap-3 rounded border p-3 sm:grid-cols-[88px_minmax(0,1fr)_auto_auto]",
                       menuForm.id === item.id ? "border-burgundy-900 bg-burgundy-50" : "border-black/8 bg-white",
                     )}
                   >
-                    <div className="relative aspect-square overflow-hidden rounded bg-smoke">
+                    <button type="button" onClick={() => selectMenuItem(item)} className="relative aspect-square overflow-hidden rounded bg-smoke">
                       {item.imageUrl ? <Image src={item.imageUrl} alt={item.name} fill sizes="88px" className="object-cover" /> : null}
-                    </div>
-                    <div className="min-w-0">
+                    </button>
+                    <button type="button" onClick={() => selectMenuItem(item)} className="min-w-0 text-left">
                       <p className="font-black text-ink">{item.name}</p>
                       <p className="mt-1 line-clamp-2 text-sm text-charcoal/64">{item.description}</p>
                       <div className="mt-2 flex flex-wrap gap-1">
+                        {!item.available ? (
+                          <span className="inline-flex h-6 items-center rounded border border-red-700/20 bg-red-50 px-2 text-[11px] font-black text-red-700">
+                            Sold out
+                          </span>
+                        ) : null}
                         {item.dietaryTags.map((tag) => (
                           <DietaryBadge key={tag} tag={tag} />
                         ))}
                       </div>
-                    </div>
-                    <div className="text-right text-sm font-black text-burgundy-700">${item.price.toFixed(2)}</div>
-                  </button>
+                    </button>
+                    <button type="button" onClick={() => selectMenuItem(item)} className="text-right text-sm font-black text-burgundy-700">${item.price.toFixed(2)}</button>
+                    <button
+                      type="button"
+                      onClick={() => updateMenuAvailability(item, !item.available)}
+                      disabled={busy === `availability-${item.id}`}
+                      className={cn(
+                        "inline-flex min-h-10 items-center justify-center rounded px-3 text-xs font-black",
+                        item.available ? "bg-red-50 text-red-700" : "bg-leaf/10 text-leaf",
+                      )}
+                    >
+                      {busy === `availability-${item.id}` ? <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> : item.available ? "86 item" : "Restore"}
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -1396,8 +1444,9 @@ function MenuEditorForm({
           <span className="mb-2 block text-sm font-black">Tags</span>
           <input value={form.tags} onChange={(event) => onChange({ ...form, tags: event.target.value })} className="h-11 w-full rounded border border-black/10 px-3 text-sm font-bold" />
         </label>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2">
           <Toggle label="Visible" checked={form.visible} onChange={(checked) => onChange({ ...form, visible: checked })} />
+          <Toggle label="Available" checked={form.available} onChange={(checked) => onChange({ ...form, available: checked })} />
           <Toggle label="Popular" checked={form.popular} onChange={(checked) => onChange({ ...form, popular: checked })} />
           <Toggle label="Weekend" checked={form.weekendOnly} onChange={(checked) => onChange({ ...form, weekendOnly: checked })} />
         </div>

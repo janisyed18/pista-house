@@ -14,6 +14,7 @@ const menuItems = flattenMenu(MENU_CATEGORIES.map((category) => ({
     ...item,
     categorySlug: category.slug,
     visible: true,
+    available: true,
     source: "seed" as const,
     sortOrder: index,
   })),
@@ -38,5 +39,15 @@ describe("getCartUpsellSuggestions", () => {
 
     expect(suggestions.map((item) => item.id)).not.toContain("raita-small");
     expect(suggestions.length).toBeGreaterThan(0);
+  });
+
+  it("does not suggest unavailable pairings", () => {
+    const biryani = menuItems.find((item) => item.id === "chicken-dum-biryani-full");
+    if (!biryani) throw new Error("Missing test biryani item");
+
+    const menuWithUnavailableRaita = menuItems.map((item) => (item.id === "raita-small" ? { ...item, available: false } : item));
+    const suggestions = getCartUpsellSuggestions([menuItemToCartLine(biryani)], menuWithUnavailableRaita);
+
+    expect(suggestions.map((item) => item.id)).not.toContain("raita-small");
   });
 });

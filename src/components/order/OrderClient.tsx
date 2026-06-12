@@ -55,7 +55,7 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
     const item = searchParams.get("item");
     if (item) {
       const menuItem = menuCategories.flatMap((group) => group.items).find((entry) => entry.id === item);
-      if (menuItem) {
+      if (menuItem?.available) {
         addItem(menuItemToCartLine(menuItem));
       }
     }
@@ -90,6 +90,10 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
   }
 
   function addMenuItem(item: MergedMenuItem) {
+    if (!item.available) {
+      return;
+    }
+
     const draft = getDraft(item.id);
     const line = menuItemToCartLine(item, draft.quantity, {
       spiceLevel: allowsSpiceSelection(item) ? draft.spiceLevel : undefined,
@@ -106,6 +110,10 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
   }
 
   function addUpsellSuggestion(item: MergedMenuItem) {
+    if (!item.available) {
+      return;
+    }
+
     const line = menuItemToCartLine(item);
     addItem(line);
     setAddedFeedback({ itemId: item.id, lineId: line.id, name: item.name, quantity: 1 });
@@ -163,6 +171,7 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
             const draft = getDraft(item.id);
             const itemAllowsSpice = allowsSpiceSelection(item);
             const isAdded = addedFeedback?.itemId === item.id;
+            const isAvailable = item.available;
 
             return (
               <article
@@ -170,6 +179,7 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
                 className={cn(
                   "grid min-w-0 gap-4 rounded border bg-white p-3 shadow-sm transition duration-200 sm:grid-cols-[128px_minmax(0,1fr)]",
                   isAdded ? "border-leaf/55 ring-2 ring-leaf/20" : "border-black/8",
+                  !isAvailable && "bg-white/80 opacity-90",
                 )}
               >
                 <div className="relative aspect-square overflow-hidden rounded bg-smoke">
@@ -181,10 +191,22 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
                     priority={category === "plates" && index < 2}
                     className="object-cover"
                   />
+                  {!isAvailable ? (
+                    <div className="absolute inset-0 grid place-items-center bg-charcoal/58">
+                      <span className="rounded bg-white px-3 py-1 text-xs font-black text-burgundy-900">Sold out</span>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-start justify-between gap-3">
-                    <h2 className="min-w-0 break-words font-black leading-tight text-ink">{item.name}</h2>
+                    <div className="min-w-0">
+                      <h2 className="min-w-0 break-words font-black leading-tight text-ink">{item.name}</h2>
+                      {!isAvailable ? (
+                        <p className="mt-1 w-fit rounded bg-red-50 px-2 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-red-700">
+                          Sold out today
+                        </p>
+                      ) : null}
+                    </div>
                     <p className="shrink-0 whitespace-nowrap font-black text-burgundy-700">{formatCurrency(item.price)}</p>
                   </div>
                   <p className="mt-2 text-sm leading-5 text-charcoal/65">{item.description}</p>
@@ -202,6 +224,7 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
                           <button
                             type="button"
                             onClick={() => updateDraft(item.id, { quantity: draft.quantity - 1 })}
+                            disabled={!isAvailable}
                             className="grid h-9 w-9 place-items-center text-charcoal transition hover:bg-smoke"
                             aria-label={`Decrease ${item.name} quantity`}
                           >
@@ -211,6 +234,7 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
                           <button
                             type="button"
                             onClick={() => updateDraft(item.id, { quantity: draft.quantity + 1 })}
+                            disabled={!isAvailable}
                             className="grid h-9 w-9 place-items-center text-charcoal transition hover:bg-smoke"
                             aria-label={`Increase ${item.name} quantity`}
                           >
@@ -221,14 +245,15 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
                       <button
                         type="button"
                         onClick={() => addMenuItem(item)}
-                        disabled={isAdded}
+                        disabled={isAdded || !isAvailable}
                         className={cn(
                           "inline-flex min-h-10 min-w-[112px] items-center justify-center gap-2 rounded px-3 py-2 text-xs font-black text-white transition disabled:cursor-default",
                           isAdded ? "bg-leaf shadow-[0_0_0_4px_rgba(38,118,90,0.14)]" : "bg-burgundy-900 hover:bg-burgundy-700",
+                          !isAvailable && "bg-charcoal/25 text-charcoal/60",
                         )}
                       >
                         {isAdded ? <CheckCircle2 aria-hidden className="h-3.5 w-3.5" /> : <Plus aria-hidden className="h-3.5 w-3.5" />}
-                        {isAdded ? "Added" : `Add ${draft.quantity}`}
+                        {!isAvailable ? "Sold out" : isAdded ? "Added" : `Add ${draft.quantity}`}
                       </button>
                     </div>
                     {itemAllowsSpice ? (
@@ -241,9 +266,11 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
                               type="button"
                               aria-pressed={draft.spiceLevel === level}
                               onClick={() => updateDraft(item.id, { spiceLevel: level })}
+                              disabled={!isAvailable}
                               className={cn(
                                 "min-h-9 rounded border px-2 text-xs font-black transition",
                                 draft.spiceLevel === level ? "border-burgundy-900 bg-burgundy-900 text-white" : "border-black/10 bg-white text-charcoal hover:border-burgundy-700/40",
+                                !isAvailable && "cursor-not-allowed opacity-50",
                               )}
                             >
                               {level}
@@ -257,6 +284,7 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
                       <input
                         value={draft.notes}
                         onChange={(event) => updateDraft(item.id, { notes: event.target.value })}
+                        disabled={!isAvailable}
                         placeholder="No onion, extra raita, allergy note"
                         maxLength={120}
                         className="h-10 w-full rounded border border-black/10 px-3 text-sm font-bold outline-none transition placeholder:text-charcoal/35 focus:border-burgundy-700 focus:ring-2 focus:ring-burgundy-700/15"
@@ -388,6 +416,7 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
                       type="button"
                       aria-label={`Add ${item.name} to order`}
                       onClick={() => addUpsellSuggestion(item)}
+                      disabled={!item.available}
                       className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded bg-burgundy-900 px-3 text-xs font-black text-white transition hover:bg-burgundy-700"
                     >
                       <Plus aria-hidden className="h-3.5 w-3.5" />

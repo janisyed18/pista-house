@@ -18,6 +18,7 @@ const updateMenuItemSchema = z.object({
   imageUrl: z.string().url().optional().or(z.literal("")),
   tags: z.array(z.string()).default([]),
   visible: z.boolean(),
+  available: z.boolean(),
   popular: z.boolean(),
   weekendOnly: z.boolean(),
   sortOrder: z.number().int().nullable().optional(),
@@ -95,6 +96,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         popular: seed.popular,
         weekendOnly: seed.weekendOnly ?? false,
         visible: false,
+        available: true,
       },
       update: { visible: false },
     });
@@ -113,6 +115,7 @@ function toMenuWriteData(body: z.infer<typeof updateMenuItemSchema>) {
     imageUrl: body.imageUrl || null,
     tags: body.tags,
     visible: body.visible,
+    available: body.available,
     popular: body.popular,
     weekendOnly: body.weekendOnly,
     sortOrder: body.sortOrder ?? null,

@@ -30,5 +30,6 @@ export function getCartUpsellSuggestions(lines: CartLine[], menuItems: MergedMen
     .filter((id) => !existingMenuItemIds.has(id))
     .map((id) => menuItems.find((item) => item.id === id))
     .filter((item): item is MergedMenuItem => Boolean(item))
+    .filter((item) => item.available)
     .slice(0, limit);
 }

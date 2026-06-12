@@ -31,17 +31,22 @@ export async function POST(request: Request) {
   const body = schema.parse(await request.json());
   const orderId = `PH-${Date.now()}`;
   const currentMenu = flattenMenu(await getMergedMenu());
-  const serverLines = body.lines.map((line) => {
+  const serverLines = [];
+
+  for (const line of body.lines) {
     const menuItemId = line.menuItemId ?? line.id;
     const item = currentMenu.find((menuItem) => menuItem.id === menuItemId);
     if (!item) {
-      throw new Error(`Menu item not found: ${menuItemId}`);
+      return NextResponse.json({ error: `Menu item not found: ${menuItemId}` }, { status: 400 });
     }
-    return menuItemToCartLine(item, line.quantity, {
+    if (!item.available) {
+      return NextResponse.json({ error: `${item.name} is currently sold out. Please remove it from your cart and choose another item.` }, { status: 409 });
+    }
+    serverLines.push(menuItemToCartLine(item, line.quantity, {
       spiceLevel: line.spiceLevel,
       notes: line.notes,
-    });
-  });
+    }));
+  }
   const totals = calculateOrderTotals(serverLines);
   const customerEmail = body.customerEmail || undefined;
 

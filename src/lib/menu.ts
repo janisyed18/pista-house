@@ -10,6 +10,7 @@ export type MergedMenuItem = MenuItem & {
   categoryName: string;
   source: MenuItemSource;
   visible: boolean;
+  available: boolean;
   sortOrder?: number | null;
 };
 
@@ -32,6 +33,7 @@ export type MenuItemOverrideInput = {
   weekendOnly: boolean;
   sortOrder?: number | null;
   visible: boolean;
+  available: boolean;
 };
 
 export type CustomMenuItemInput = MenuItemOverrideInput & {
@@ -127,6 +129,7 @@ export function mergeMenuData({
     category.items.forEach((seedItem, index) => {
       const override = overridesById.get(seedItem.id);
       const visible = override?.visible ?? true;
+      const available = override?.available ?? true;
       if (!includeHidden && !visible) {
         return;
       }
@@ -154,6 +157,7 @@ export function mergeMenuData({
         categoryName: meta.name,
         source: "seed",
         visible,
+        available,
         sortOrder: override?.sortOrder ?? index,
       };
       pushItem(itemsByCategory, categorySlug, item);
@@ -186,6 +190,7 @@ export function mergeMenuData({
       categoryName: meta.name,
       source: "custom",
       visible: customItem.visible,
+      available: customItem.available,
       sortOrder: customItem.sortOrder ?? index,
     });
   });

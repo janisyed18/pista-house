@@ -110,12 +110,14 @@ export function MenuItemCard({
   compact = false,
   actionHref = "/order",
 }: {
-  item: MenuItem;
+  item: MenuItem & { available?: boolean };
   compact?: boolean;
   actionHref?: string;
 }) {
+  const available = item.available ?? true;
+
   return (
-    <article className="group overflow-hidden rounded border border-black/8 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lift">
+    <article className={cn("group overflow-hidden rounded border border-black/8 bg-white shadow-sm transition", available ? "hover:-translate-y-0.5 hover:shadow-lift" : "opacity-90")}>
       <div className={cn("relative bg-smoke", compact ? "aspect-[4/3]" : "aspect-[4/3]")}>
         <Image
           src={item.imageUrl}
@@ -134,6 +136,11 @@ export function MenuItemCard({
             Weekend
           </span>
         ) : null}
+        {!available ? (
+          <div className="absolute inset-0 grid place-items-center bg-charcoal/58">
+            <span className="rounded bg-white px-4 py-2 text-sm font-black text-burgundy-900">Sold out today</span>
+          </div>
+        ) : null}
       </div>
       <div className="p-4">
         <p className="mb-2 text-[11px] text-charcoal/48">Illustrative image only</p>
@@ -148,9 +155,13 @@ export function MenuItemCard({
               <DietaryBadge key={tag} tag={tag} />
             ))}
           </div>
-          <Link href={`${actionHref}?item=${item.id}`} className="rounded bg-burgundy-900 px-3 py-2 text-xs font-black text-white transition hover:bg-burgundy-700">
-            Add to Order
-          </Link>
+          {available ? (
+            <Link href={`${actionHref}?item=${item.id}`} className="rounded bg-burgundy-900 px-3 py-2 text-xs font-black text-white transition hover:bg-burgundy-700">
+              Add to Order
+            </Link>
+          ) : (
+            <span className="rounded bg-charcoal/12 px-3 py-2 text-xs font-black text-charcoal/58">Unavailable</span>
+          )}
         </div>
       </div>
     </article>

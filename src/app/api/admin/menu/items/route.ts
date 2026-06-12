@@ -16,6 +16,7 @@ const createMenuItemSchema = z.object({
   imageUrl: z.string().url().optional().or(z.literal("")),
   tags: z.array(z.string()).default([]),
   visible: z.boolean().default(true),
+  available: z.boolean().default(true),
   popular: z.boolean().default(false),
   weekendOnly: z.boolean().default(false),
 });
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
         imageUrl: body.imageUrl || null,
         tags: body.tags,
         visible: body.visible,
+        available: body.available,
         popular: body.popular,
         weekendOnly: body.weekendOnly,
       },

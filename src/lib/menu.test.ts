@@ -17,6 +17,7 @@ describe("mergeMenuData", () => {
           tags: ["H"],
           categorySlug: "plates",
           visible: true,
+          available: false,
           popular: true,
           weekendOnly: false,
           sortOrder: 1,
@@ -30,6 +31,7 @@ describe("mergeMenuData", () => {
           tags: ["H", "S"],
           categorySlug: "plates",
           visible: false,
+          available: true,
           popular: true,
           weekendOnly: false,
           sortOrder: 2,
@@ -47,6 +49,7 @@ describe("mergeMenuData", () => {
       description: "Updated description from admin.",
       dietaryTags: ["H"],
       imageUrl: "https://example.com/biryani.jpg",
+      available: false,
     });
     expect(items.find((item) => item.id === "nawabi-plate-serve-two")).toBeUndefined();
   });
@@ -66,6 +69,7 @@ describe("mergeMenuData", () => {
           imageUrl: "https://example.com/dessert.jpg",
           tags: ["V"],
           visible: false,
+          available: false,
           popular: false,
           weekendOnly: true,
           sortOrder: 0,
@@ -80,8 +84,23 @@ describe("mergeMenuData", () => {
       id: "custom-family-dessert",
       price: 18,
       visible: false,
+      available: false,
       source: "custom",
       weekendOnly: true,
+    });
+  });
+
+  it("defaults seed items to available when no override exists", () => {
+    const merged = mergeMenuData({
+      seedCategories: MENU_CATEGORIES,
+      itemOverrides: [],
+      customItems: [],
+      categoryOverrides: [],
+      includeHidden: false,
+    });
+
+    expect(flattenMenu(merged).find((item) => item.id === "chicken-65")).toMatchObject({
+      available: true,
     });
   });
 });
