@@ -4,8 +4,9 @@ import { z } from "zod";
 
 import { sendOrderConfirmation } from "@/lib/email";
 import { flattenMenu, getMergedMenu } from "@/lib/menu";
-import { calculateOrderTotals, formatCartLineCustomization, menuItemToCartLine, SPICE_LEVELS } from "@/lib/order";
+import { calculateOrderTotals, menuItemToCartLine, SPICE_LEVELS } from "@/lib/order";
 import { hasDatabase, prisma } from "@/lib/prisma";
+import { buildStripeCheckoutSessionParams } from "@/lib/stripe-checkout";
 
 export const runtime = "nodejs";
 
@@ -83,26 +84,13 @@ export async function POST(request: Request) {
   }
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    success_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/order/success?session_id={CHECKOUT_SESSION_ID}&order_id=${orderId}`,
-    cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/order`,
-    line_items: serverLines.map((line) => ({
-      quantity: line.quantity,
-      price_data: {
-        currency: "aud",
-        unit_amount: Math.round(line.price * 100),
-        product_data: {
-          name: [line.name, formatCartLineCustomization(line)].filter(Boolean).join(" - "),
-        },
-      },
-    })),
-    customer_email: customerEmail,
-    metadata: {
-      orderId,
-      pickupTime: body.pickupTime,
-    },
-  });
+  const session = await stripe.checkout.sessions.create(buildStripeCheckoutSessionParams({
+    siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+    orderId,
+    pickupTime: body.pickupTime,
+    lines: serverLines,
+    customerEmail,
+  }));
 
   if (hasDatabase()) {
     await prisma.order.update({

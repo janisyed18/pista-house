@@ -376,7 +376,7 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
             {loading ? "Opening checkout..." : "Pay Online"}
           </button>
           <p className="mt-3 text-xs leading-5 text-charcoal/55">
-            Stripe Checkout is used when `STRIPE_SECRET_KEY` is configured. Local development returns a demo success link.
+            Promo codes can be entered securely in Stripe Checkout. Local development returns a demo success link when Stripe is not configured.
           </p>
           <a href={RESTAURANT_CONFIG.orderingLink} target="_blank" rel="noreferrer" className="mt-4 block text-center text-sm font-black text-burgundy-700">
             Prefer delivery? Order via DoorDash
