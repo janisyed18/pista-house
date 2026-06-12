@@ -10,6 +10,7 @@ const footerLinks = [
   ["Order Online", "/order"],
   ["Reserve", "/reserve"],
   ["Catering", "/catering"],
+  ["Allergen Matrix", "/allergens"],
   ["About", "/about"],
   ["Contact", "/contact"],
   ["Privacy Policy", "/privacy"],

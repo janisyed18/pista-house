@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { MenuExplorer } from "@/components/menu/MenuExplorer";
 import { MenuJsonLd } from "@/components/seo/MenuJsonLd";
@@ -24,6 +25,9 @@ export default async function MenuPage() {
           <p className="mt-5 text-lg leading-8 text-charcoal/72">
             Menu prices and availability subject to change. Images are illustrative only.
           </p>
+          <Link href="/allergens" className="mt-5 inline-flex rounded border border-burgundy-900/15 bg-white px-4 py-3 text-sm font-black text-burgundy-700 shadow-sm transition hover:border-burgundy-700">
+            View allergen matrix
+          </Link>
         </div>
         <MenuExplorer menuCategories={menuCategories} />
       </div>
