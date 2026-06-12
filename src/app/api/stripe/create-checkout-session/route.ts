@@ -5,6 +5,7 @@ import { z } from "zod";
 import { sendOrderConfirmation } from "@/lib/email";
 import { flattenMenu, getMergedMenu } from "@/lib/menu";
 import { calculateOrderTotals, menuItemToCartLine, SPICE_LEVELS } from "@/lib/order";
+import { getPersistedOrderingPauseStatus } from "@/lib/ordering-pause";
 import { hasDatabase, prisma } from "@/lib/prisma";
 import { buildStripeCheckoutSessionParams } from "@/lib/stripe-checkout";
 
@@ -29,6 +30,12 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   const body = schema.parse(await request.json());
+  const orderingPause = await getPersistedOrderingPauseStatus();
+
+  if (orderingPause.paused) {
+    return NextResponse.json({ error: orderingPause.message }, { status: 503 });
+  }
+
   const orderId = `PH-${Date.now()}`;
   const currentMenu = flattenMenu(await getMergedMenu());
   const serverLines = [];

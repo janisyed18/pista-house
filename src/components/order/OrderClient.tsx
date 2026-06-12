@@ -12,6 +12,7 @@ import { formatCurrency } from "@/lib/hours";
 import type { MergedMenuCategory, MergedMenuItem } from "@/lib/menu";
 import { calculateOrderTotals, formatCartLineCustomization, menuItemToCartLine, SPICE_LEVELS, type SpiceLevel } from "@/lib/order";
 import { getCartUpsellSuggestions } from "@/lib/order-upsells";
+import type { OrderingPauseStatus } from "@/lib/ordering-pause-shared";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 
@@ -30,7 +31,7 @@ const defaultDraft: ItemDraft = {
   notes: "",
 };
 
-export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCategory[] }) {
+export function OrderClient({ menuCategories, orderingPause }: { menuCategories: MergedMenuCategory[]; orderingPause: OrderingPauseStatus }) {
   const searchParams = useSearchParams();
   const initialCategory = menuCategories.some((group) => group.slug === "plates") ? "plates" : (menuCategories[0]?.slug ?? "all");
   const [category, setCategory] = useState(initialCategory);
@@ -124,6 +125,11 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
   }
 
   async function checkout() {
+    if (orderingPause.paused) {
+      setCheckoutError(orderingPause.message);
+      return;
+    }
+
     setLoading(true);
     setCheckoutError("");
 
@@ -154,6 +160,20 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
       </aside>
 
       <section className="min-w-0">
+        {orderingPause.paused ? (
+          <div className="mb-5 rounded border border-burgundy-700/20 bg-burgundy-50 p-4">
+            <p className="text-sm font-black uppercase tracking-[0.16em] text-burgundy-700">Online ordering paused</p>
+            <p className="mt-2 text-base font-bold leading-7 text-charcoal">{orderingPause.message}</p>
+            {orderingPause.pausedUntil ? (
+              <p className="mt-2 text-sm font-bold text-charcoal/60">
+                Expected back {new Date(orderingPause.pausedUntil).toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" })}
+              </p>
+            ) : null}
+            <a href={`tel:${RESTAURANT_CONFIG.phone.replace(/\s/g, "")}`} className="mt-3 inline-flex rounded bg-burgundy-900 px-4 py-2 text-sm font-black text-white">
+              Call the restaurant
+            </a>
+          </div>
+        ) : null}
         <div className="mb-5 flex min-w-0 gap-2 overflow-x-auto xl:hidden">
           {menuCategories.map((group) => (
             <button
@@ -443,12 +463,12 @@ export function OrderClient({ menuCategories }: { menuCategories: MergedMenuCate
           </dl>
           <button
             type="button"
-            disabled={lines.length === 0 || loading}
+            disabled={lines.length === 0 || loading || orderingPause.paused}
             onClick={checkout}
             className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded bg-burgundy-900 px-5 py-3 text-sm font-black text-white transition hover:bg-burgundy-700 disabled:cursor-not-allowed disabled:bg-charcoal/25"
           >
             <CreditCard aria-hidden className="h-4 w-4" />
-            {loading ? "Opening checkout..." : "Pay Online"}
+            {orderingPause.paused ? "Ordering Paused" : loading ? "Opening checkout..." : "Pay Online"}
           </button>
           <p className="mt-3 text-xs leading-5 text-charcoal/55">
             Promo codes can be entered securely in Stripe Checkout. Local development returns a demo success link when Stripe is not configured.

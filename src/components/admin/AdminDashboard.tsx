@@ -31,6 +31,7 @@ import { RESTAURANT_CONFIG } from "@/config/restaurant";
 import type { DietaryTag } from "@/data/menu";
 import type { MergedMenuCategory, MergedMenuItem } from "@/lib/menu";
 import { getNextOrderStatuses, type AdminOrderStatus, type AuditRangeKey } from "@/lib/order-admin";
+import { orderingPauseDefaultMessage, type OrderingPauseAction, type OrderingPauseStatus } from "@/lib/ordering-pause-shared";
 import { getNextBookingStatuses, type AdminBookingStatus } from "@/lib/reservation-admin";
 import type { SmsSendResult } from "@/lib/sms";
 import { cn } from "@/lib/utils";
@@ -144,6 +145,11 @@ type AdminCateringEnquiry = {
 
 type HealthResponse = {
   services: Record<string, boolean>;
+};
+
+type OrderingPauseResponse = {
+  status: OrderingPauseStatus;
+  demo?: boolean;
 };
 
 type MenuFormState = {
@@ -288,6 +294,8 @@ export function AdminDashboard() {
   const [auditRange, setAuditRange] = useState<AuditRangeKey>("daily");
   const [auditMetrics, setAuditMetrics] = useState<AuditMetrics | null>(null);
   const [health, setHealth] = useState<HealthResponse | null>(null);
+  const [orderingPause, setOrderingPause] = useState<OrderingPauseStatus | null>(null);
+  const [orderingPauseMessage, setOrderingPauseMessage] = useState(orderingPauseDefaultMessage);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [scannerActive, setScannerActive] = useState(false);
@@ -347,9 +355,15 @@ export function AdminDashboard() {
     setHealth(data);
   }, []);
 
+  const loadOrderingPause = useCallback(async () => {
+    const data = await fetchJson<OrderingPauseResponse>("/api/admin/ordering/pause");
+    setOrderingPause(data.status);
+    setOrderingPauseMessage(data.status.message || orderingPauseDefaultMessage);
+  }, []);
+
   useEffect(() => {
-    void Promise.all([loadOrders(), loadReservations(), loadTables(), loadAnnouncements(), loadCatering(), loadMenu(), loadAudit(), loadHealth()]).catch((error) => setMessage(error.message));
-  }, [loadAnnouncements, loadAudit, loadCatering, loadHealth, loadMenu, loadOrders, loadReservations, loadTables]);
+    void Promise.all([loadOrders(), loadReservations(), loadTables(), loadAnnouncements(), loadCatering(), loadMenu(), loadAudit(), loadHealth(), loadOrderingPause()]).catch((error) => setMessage(error.message));
+  }, [loadAnnouncements, loadAudit, loadCatering, loadHealth, loadMenu, loadOrderingPause, loadOrders, loadReservations, loadTables]);
 
   useEffect(() => {
     return () => stopScanner();
@@ -363,6 +377,7 @@ export function AdminDashboard() {
     setBusy("refresh");
     try {
       await Promise.all([loadOrders(), loadReservations(), loadTables(), loadAnnouncements(), loadCatering(), loadMenu(), loadAudit(), loadHealth()]);
+      await loadOrderingPause();
       setMessage("Updated");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Refresh failed");
@@ -486,6 +501,24 @@ export function AdminDashboard() {
       setMessage(isNew ? "Announcement published" : "Announcement saved");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Announcement save failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function updateOrderingPause(action: OrderingPauseAction) {
+    setBusy("ordering-pause");
+    try {
+      const data = await fetchJson<OrderingPauseResponse>("/api/admin/ordering/pause", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, message: orderingPauseMessage }),
+      });
+      setOrderingPause(data.status);
+      setOrderingPauseMessage(data.status.message || orderingPauseDefaultMessage);
+      setMessage(data.status.paused ? "Online ordering paused" : "Online ordering resumed");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Ordering pause update failed");
     } finally {
       setBusy(null);
     }
@@ -973,7 +1006,16 @@ export function AdminDashboard() {
           <AuditPanel range={auditRange} metrics={auditMetrics} onRange={setAuditRange} />
         ) : null}
 
-        {active === "settings" ? <SettingsPanel health={health} /> : null}
+        {active === "settings" ? (
+          <SettingsPanel
+            health={health}
+            orderingPause={orderingPause}
+            orderingPauseMessage={orderingPauseMessage}
+            busy={busy}
+            onOrderingPauseMessage={setOrderingPauseMessage}
+            onOrderingPause={updateOrderingPause}
+          />
+        ) : null}
       </section>
     </div>
   );
@@ -1769,9 +1811,73 @@ function AuditPanel({
   );
 }
 
-function SettingsPanel({ health }: { health: HealthResponse | null }) {
+function SettingsPanel({
+  health,
+  orderingPause,
+  orderingPauseMessage,
+  busy,
+  onOrderingPauseMessage,
+  onOrderingPause,
+}: {
+  health: HealthResponse | null;
+  orderingPause: OrderingPauseStatus | null;
+  orderingPauseMessage: string;
+  busy: string | null;
+  onOrderingPauseMessage: (message: string) => void;
+  onOrderingPause: (action: OrderingPauseAction) => void;
+}) {
   return (
     <div className="grid gap-5 xl:grid-cols-2">
+      <div className="rounded border border-black/8 p-4">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-black text-ink">Online ordering</h3>
+            <p className="mt-1 text-sm font-bold text-charcoal/58">Pause click-and-collect when the kitchen is at capacity.</p>
+          </div>
+          <span className={cn("rounded px-3 py-1.5 text-xs font-black", orderingPause?.paused ? "bg-red-50 text-red-700" : "bg-leaf/10 text-leaf")}>
+            {orderingPause?.paused ? "Paused" : "Accepting orders"}
+          </span>
+        </div>
+        {orderingPause?.pausedUntil ? (
+          <p className="mb-3 rounded bg-saffron-50 px-3 py-2 text-sm font-bold text-burgundy-900">
+            Auto-resumes {new Date(orderingPause.pausedUntil).toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" })}
+          </p>
+        ) : null}
+        <label className="block">
+          <span className="mb-2 block text-sm font-black">Guest message</span>
+          <textarea
+            value={orderingPauseMessage}
+            onChange={(event) => onOrderingPauseMessage(event.target.value.slice(0, 180))}
+            className="min-h-24 w-full rounded border border-black/10 px-3 py-2 text-sm font-bold"
+          />
+        </label>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {[
+            ["pause_20", "Pause 20 min"],
+            ["pause_40", "Pause 40 min"],
+            ["pause_tomorrow", "Until tomorrow"],
+            ["pause_indefinite", "Pause until resumed"],
+          ].map(([action, label]) => (
+            <button
+              key={action}
+              type="button"
+              onClick={() => onOrderingPause(action as OrderingPauseAction)}
+              disabled={busy === "ordering-pause"}
+              className="inline-flex min-h-10 items-center justify-center rounded bg-burgundy-900 px-3 text-sm font-black text-white disabled:bg-charcoal/25"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => onOrderingPause("on")}
+          disabled={busy === "ordering-pause"}
+          className="mt-2 inline-flex min-h-10 w-full items-center justify-center rounded border border-black/10 px-3 text-sm font-black text-charcoal disabled:text-charcoal/35"
+        >
+          Resume online ordering
+        </button>
+      </div>
       <div className="rounded border border-black/8 p-4">
         <h3 className="mb-3 text-lg font-black text-ink">Service health</h3>
         <div className="grid gap-2">
@@ -1785,7 +1891,7 @@ function SettingsPanel({ health }: { health: HealthResponse | null }) {
           ))}
         </div>
       </div>
-      <div className="rounded border border-black/8 p-4">
+      <div className="rounded border border-black/8 p-4 xl:col-span-2">
         <h3 className="mb-3 text-lg font-black text-ink">Restaurant</h3>
         <dl className="grid gap-2 text-sm">
           <div className="flex justify-between gap-3 border-b border-black/8 py-2">
