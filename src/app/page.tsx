@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { ClickCollectSection } from "@/components/home/ClickCollectSection";
+import { FaqSection } from "@/components/home/FaqSection";
 import { FeaturedSection } from "@/components/home/FeaturedSection";
 import { HalalAssuranceSection } from "@/components/home/HalalAssuranceSection";
 import { HeroSection } from "@/components/home/HeroSection";
@@ -13,7 +14,9 @@ import { RecognitionStrip } from "@/components/home/RecognitionStrip";
 import { ReviewsSection } from "@/components/home/ReviewsSection";
 import { SocialProofBanner } from "@/components/home/SocialProofBanner";
 import { WhyChooseUs } from "@/components/home/WhyChooseUs";
+import { FaqJsonLd } from "@/components/seo/FaqJsonLd";
 import { RESTAURANT_CONFIG } from "@/config/restaurant";
+import { RESTAURANT_FAQS } from "@/data/faqs";
 import { flattenMenu, getMergedMenu } from "@/lib/menu";
 import { getReviews } from "@/lib/reviews";
 
@@ -38,7 +41,9 @@ export default async function Home() {
       <ReviewsSection reviews={reviews} />
       <MapSection />
       <ClickCollectSection />
+      <FaqSection />
       <SocialProofBanner />
+      <FaqJsonLd faqs={RESTAURANT_FAQS} />
     </>
   );
 }
