@@ -42,9 +42,14 @@ export default async function AdminPage() {
             <p className="mb-2 text-xs font-black uppercase tracking-[0.22em] text-saffron-700">Admin Dashboard</p>
             <h1 className="font-display text-4xl font-bold leading-none text-ink md:text-5xl">Restaurant Operations</h1>
           </div>
-          <p className="max-w-xl text-sm font-bold leading-6 text-charcoal/62">
-            Manage orders, reservations, QR pickup, tables, promotions, catering and audit reporting from one workspace.
-          </p>
+          <div className="grid gap-3 sm:justify-items-end">
+            <p className="max-w-xl text-sm font-bold leading-6 text-charcoal/62 sm:text-right">
+              Manage orders, reservations, QR pickup, tables, promotions, catering and audit reporting from one workspace.
+            </p>
+            <Link href="/admin/kitchen" className="inline-flex min-h-11 items-center justify-center rounded bg-burgundy-900 px-4 text-sm font-black text-white">
+              Open Kitchen Display
+            </Link>
+          </div>
         </div>
         <AdminDashboard />
       </div>
