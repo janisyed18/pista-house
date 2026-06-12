@@ -96,7 +96,7 @@ export const RESTAURANT_CONFIG = {
     {
       icon: "🕌",
       title: "100% Halal",
-      desc: "Certified Halal. Serving Sydney's Muslim community with pride",
+      desc: "Source-backed halal menu. Serving Sydney's Muslim community with pride",
     },
     {
       icon: "⚡",
@@ -105,8 +105,8 @@ export const RESTAURANT_CONFIG = {
     },
     {
       icon: "🏆",
-      title: "Award Winning",
-      desc: "Western Sydney's most-loved biryani since 2018",
+      title: "Community Favourite",
+      desc: "Western Sydney's much-loved biryani destination since 2018",
     },
   ],
 } satisfies RestaurantConfig;

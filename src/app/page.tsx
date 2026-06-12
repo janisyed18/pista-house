@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { ClickCollectSection } from "@/components/home/ClickCollectSection";
 import { FeaturedSection } from "@/components/home/FeaturedSection";
+import { HalalAssuranceSection } from "@/components/home/HalalAssuranceSection";
 import { HeroSection } from "@/components/home/HeroSection";
 import { LiveStatusBar } from "@/components/home/LiveStatusBar";
 import { MapSection } from "@/components/home/MapSection";
@@ -30,6 +31,7 @@ export default async function Home() {
       <LiveStatusBar />
       <QuickInfoStrip />
       <RecognitionStrip />
+      <HalalAssuranceSection />
       <FeaturedSection menuItems={menuItems} />
       <WhyChooseUs />
       <MenuPreview menuCategories={menuCategories} />

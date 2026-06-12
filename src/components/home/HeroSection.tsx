@@ -55,7 +55,7 @@ export function HeroSection({ hasHeroVideo, reviews }: { hasHeroVideo: boolean; 
             variants={fadeUp}
             className="mb-5 inline-flex rounded border border-saffron-300/60 bg-black/25 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-saffron-100 backdrop-blur"
           >
-            Hyderabadi Cuisine · Halal Certified · Wentworthville NSW
+            Hyderabadi Cuisine · Halal Menu · Wentworthville NSW
           </motion.p>
           <motion.h1 variants={fadeUp} className="font-display text-7xl font-bold leading-[0.88] text-white md:text-9xl">
             Pista House

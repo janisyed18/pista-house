@@ -55,13 +55,13 @@ export default function AboutPage() {
         <div className="mt-16 grid gap-6 rounded border border-black/8 bg-white p-6 shadow-sm lg:grid-cols-3">
           <div>
             <BadgeCheck aria-hidden className="mb-4 h-8 w-8 text-leaf" />
-            <h2 className="text-2xl font-black">Halal Certified</h2>
-            <p className="mt-2 text-sm leading-6 text-charcoal/68">100% halal meat sourcing and preparation standards for Sydney&apos;s Muslim community.</p>
+            <h2 className="text-2xl font-black">Halal Assurance</h2>
+            <p className="mt-2 text-sm leading-6 text-charcoal/68">Source-backed halal menu confidence for Sydney&apos;s Muslim community, with supplier questions welcomed in-store.</p>
           </div>
           <div>
             <Award aria-hidden className="mb-4 h-8 w-8 text-saffron-700" />
-            <h2 className="text-2xl font-black">Press & Awards</h2>
-            <p className="mt-2 text-sm leading-6 text-charcoal/68">A polished section for local media, hospitality awards and community mentions.</p>
+            <h2 className="text-2xl font-black">Recognition</h2>
+            <p className="mt-2 text-sm leading-6 text-charcoal/68">Listed across local dining, traveller review and halal restaurant guides.</p>
           </div>
           <div>
             <HeartHandshake aria-hidden className="mb-4 h-8 w-8 text-burgundy-700" />
