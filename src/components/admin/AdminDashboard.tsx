@@ -32,6 +32,7 @@ import type { DietaryTag } from "@/data/menu";
 import type { MergedMenuCategory, MergedMenuItem } from "@/lib/menu";
 import { getNextOrderStatuses, type AdminOrderStatus, type AuditRangeKey } from "@/lib/order-admin";
 import { getNextBookingStatuses, type AdminBookingStatus } from "@/lib/reservation-admin";
+import type { SmsSendResult } from "@/lib/sms";
 import { cn } from "@/lib/utils";
 
 type TabId = "orders" | "reservations" | "qr" | "menu" | "tables" | "promotions" | "catering" | "audit" | "settings";
@@ -229,8 +230,30 @@ const serviceLabels: Record<string, string> = {
   stripeWebhook: "Stripe Webhook",
   cloudinaryUpload: "Image Upload",
   resendEmail: "Email",
+  twilioSms: "SMS",
   adminPasswordHash: "Password Hash",
 };
+
+function formatOrderStatusMessage(order: AdminOrder, sms?: SmsSendResult) {
+  const base = `Order ${order.id} moved to ${statusLabels[order.status]}`;
+
+  if (!sms) {
+    return base;
+  }
+
+  if (sms.status === "sent") {
+    return `${base}. SMS sent to customer.`;
+  }
+
+  const reasons: Record<Extract<SmsSendResult, { status: "skipped" }>["reason"], string> = {
+    sms_not_configured: "Twilio SMS is not configured",
+    missing_phone: "customer phone is missing",
+    invalid_phone: "customer phone is not a valid Australian mobile",
+    provider_error: "SMS provider returned an error",
+  };
+
+  return `${base}. SMS not sent: ${reasons[sms.reason]}.`;
+}
 
 export function AdminDashboard() {
   const [active, setActive] = useState<TabId>("orders");
@@ -349,14 +372,14 @@ export function AdminDashboard() {
   async function updateOrderStatus(order: AdminOrder, status: AdminOrderStatus) {
     setBusy(`order-${order.id}`);
     try {
-      const data = await fetchJson<{ order: AdminOrder }>(`/api/admin/orders/${order.id}/status`, {
+      const data = await fetchJson<{ order: AdminOrder; sms?: SmsSendResult }>(`/api/admin/orders/${order.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
       setOrders((current) => current.map((item) => (item.id === data.order.id ? data.order : item)));
       setSelectedOrder(data.order);
-      setMessage(`Order ${data.order.id} moved to ${statusLabels[data.order.status]}`);
+      setMessage(formatOrderStatusMessage(data.order, data.sms));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Order update failed");
     } finally {
@@ -1232,6 +1255,14 @@ function OrderDetail({
         <div className="flex justify-between gap-3">
           <dt className="text-charcoal/58">Pickup</dt>
           <dd className="font-black">{order.pickupTime}</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-charcoal/58">Customer</dt>
+          <dd className="font-black">{order.customerName ?? "Pickup customer"}</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-charcoal/58">Phone</dt>
+          <dd className="font-black">{order.customerPhone ?? "Not provided"}</dd>
         </div>
         <div className="flex justify-between gap-3">
           <dt className="text-charcoal/58">Total</dt>

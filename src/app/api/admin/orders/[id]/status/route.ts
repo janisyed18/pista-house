@@ -5,6 +5,7 @@ import { writeAdminAuditLog } from "@/lib/admin-audit";
 import { serializeAdminOrder } from "@/lib/admin-orders";
 import { canTransitionOrderStatus, type AdminOrderStatus } from "@/lib/order-admin";
 import { hasDatabase, prisma } from "@/lib/prisma";
+import { sendOrderReadySms } from "@/lib/sms";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,6 +51,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       request,
     });
 
-    return { order: serializeAdminOrder(order) };
+    const sms =
+      before.status !== "READY_FOR_PICKUP" && order.status === "READY_FOR_PICKUP"
+        ? await sendOrderReadySms({
+            phone: order.customerPhone,
+            orderId: order.id,
+            pickupTime: order.pickupTime,
+          })
+        : undefined;
+
+    return { order: serializeAdminOrder(order), sms };
   });
 }
